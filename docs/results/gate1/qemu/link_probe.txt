@@ -1,0 +1,2 @@
+{"expected": 200, "received": 200, "malformed": 0, "gaps": 0, "out_of_order": 0, "nominal_ms": 50.0, "interarrival_p50_ms": 50.026, "interarrival_max_ms": 51.722, "pass": true}
+GATE1 LINK PROBE: PASS

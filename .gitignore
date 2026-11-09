@@ -1,0 +1,21 @@
+# builds
+qnx/build/
+build/
+build_smoke/
+accelerator/**/reports/
+*.o
+# python
+.venv/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+# licensed / large artefacts - never commit
+*.qcow2
+*.img
+*.ifs
+output/
+qnx800/
+# misc
+.probe
+.vscode/
+.idea/

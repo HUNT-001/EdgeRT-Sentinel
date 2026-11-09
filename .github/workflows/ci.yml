@@ -1,0 +1,25 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  offtarget:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: QNX probes (host fallback build)
+        run: |
+          make -C qnx/gate1 HOST=1
+          ./qnx/build/host/link_probe --stdout --count 20 --hz 100 > link.log
+      - name: HLS smoke testbench (g++)
+        run: bash accelerator/smoke/run_hls.sh --gcc
+      - name: Host CLI tests
+        run: |
+          pip install -e "host[dev]"
+          cd host && pytest -q
+          cd .. && edgert probe --log link.log --expect 20 --hz 100

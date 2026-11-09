@@ -1,0 +1,7 @@
+rt_probe: QNX 8.0.0 2026/06/05-16:26:03EDT (x86pc)
+rt_probe: kernel clock period 1000000 ns
+rt_probe: SCHED_FIFO prio 40 -> OK
+rt_probe: hz=50 cycles=3000 period_us=20000
+rt_probe: |jitter| p50=256us p99=1469us max=1968us overruns=0
+{"probe":"rt","hz":50,"cycles":3000,"fifo_ok":true,"p50_ns":256455,"p99_ns":1469999,"max_ns":1968486,"overruns":0,"pass":true}
+GATE1 RT PROBE: PASS
