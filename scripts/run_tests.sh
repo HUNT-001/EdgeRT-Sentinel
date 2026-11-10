@@ -21,6 +21,15 @@ echo "== python: golden model properties + host CLI/scenarios"
 python3 -m pytest -q tests/unit
 (cd host && PYTHONPATH=. python3 -m pytest -q)
 
+echo "== control policy + safety monitor (unit + scenario invariants)"
+g++ -std=gnu++17 -O2 -Wall -Wextra -Werror -Iqnx/common/include -Iaccelerator/include \
+    tests/unit/test_control.cpp -o "$B/test_control"
+mkdir -p "$B/csv"
+for s in scenarios/*.yaml; do
+  python3 -m edgert.cli scenario expand "$s" --format csv --out "$B/csv/$(basename "$s" .yaml).csv" >/dev/null
+done
+"$B/test_control" "$B/csv"
+
 echo "== riskd IPC replay of all scenarios (host transport)"
 bash scripts/ipc_test_host.sh | grep -c "IPC TEST: PASS" | grep -qx "$(ls scenarios/*.yaml | wc -l)"
 
