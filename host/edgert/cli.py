@@ -79,9 +79,16 @@ def scenario_summary(path: Path) -> None:
 
 
 @scenario_app.command("expand")
-def scenario_expand(path: Path, out: Path = typer.Option(None, help="Write JSON Lines here (default stdout)")) -> None:
-    """Expand a scenario to JSON Lines: one frame with inputs and expected output per line."""
-    lines = [json.dumps(f, separators=(",", ":")) for f in sc.expand(_load(path))]
+def scenario_expand(
+    path: Path,
+    out: Path = typer.Option(None, help="Write here (default stdout)"),
+    fmt: str = typer.Option("jsonl", "--format", help="jsonl | csv (csv is what the target-side ipc_test reads)"),
+) -> None:
+    """Expand a scenario: one frame with inputs and expected output per line."""
+    if fmt not in ("jsonl", "csv"):
+        raise typer.BadParameter("format must be jsonl or csv")
+    frames = sc.expand(_load(path))
+    lines = sc.to_csv_lines(frames) if fmt == "csv" else [json.dumps(f, separators=(",", ":")) for f in frames]
     if out:
         out.write_text("\n".join(lines) + "\n", encoding="utf-8")
         typer.echo(f"wrote {len(lines)} frames to {out}")

@@ -13,4 +13,5 @@ fi
 command -v q++ >/dev/null || { echo "error: q++ not on PATH after sourcing SDP env"; exit 2; }
 
 make -C "$ROOT/qnx/gate1"
+make -C "$ROOT/qnx/runtime"
 file "$ROOT"/qnx/build/qnx-x86_64/* 2>/dev/null || ls -l "$ROOT"/qnx/build/qnx-x86_64/

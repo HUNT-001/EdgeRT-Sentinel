@@ -172,3 +172,18 @@ def summarize(frames: list[dict]) -> dict:
             "first_t_ms_by_level": {str(l): next(f["t_ms"] for f in frames if f["expected"]["risk_level"] == l)
                                     for l in sorted(set(levels))},
             "invalid_frames": sum(1 for f in frames if f["expected"]["status"] != 0)}
+
+
+CSV_HEADER = "seq,t_ms,flags,dist,closing,ego,age,conf,risk_q15,risk_level,ttc_ms,stop_mm,vmax,status"
+
+
+def to_csv_lines(frames: list[dict]) -> list[str]:
+    """Integer-only CSV for the target-side ipc_test (no JSON parser needed on QNX)."""
+    rows = [CSV_HEADER]
+    for f in frames:
+        i, e = f["in"], f["expected"]
+        rows.append(",".join(str(x) for x in (
+            f["seq"], f["t_ms"], f["flags"], i["obstacle_distance_mm"], i["closing_speed_mm_s"],
+            i["ego_speed_mm_s"], i["sensor_age_ms"], i["confidence_u8"], e["risk_q15"], e["risk_level"],
+            e["time_to_collision_ms"], e["stopping_distance_mm"], e["max_safe_speed_mm_s"], e["status"])))
+    return rows

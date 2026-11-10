@@ -21,4 +21,7 @@ echo "== python: golden model properties + host CLI/scenarios"
 python3 -m pytest -q tests/unit
 (cd host && PYTHONPATH=. python3 -m pytest -q)
 
+echo "== riskd IPC replay of all scenarios (host transport)"
+bash scripts/ipc_test_host.sh | grep -c "IPC TEST: PASS" | grep -qx "$(ls scenarios/*.yaml | wc -l)"
+
 echo "ALL TESTS PASS"

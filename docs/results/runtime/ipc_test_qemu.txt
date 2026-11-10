@@ -1,0 +1,8 @@
+# Runtime IPC test on QNX 8.0.0 (QEMU x86_64), 2026-11-10
+# riskd --prio 50 (SCHED_FIFO), ipc_test --prio 40, native name_attach/MsgSend, protocol v1
+# QEMU timings: not hardware numbers.
+approach_stop.csv      frames=401 mismatches=0 io_errors=0 negative_fail=0  rtt_us p50=82.4 p99=193.2 max=882.2  PASS
+dropout_recovery.csv   frames=171 mismatches=0 io_errors=0 negative_fail=0  rtt_us p50=83.9 p99=162.3 max=281.0  PASS
+invalid_frame.csv      frames=201 mismatches=0 io_errors=0 negative_fail=0  rtt_us p50=83.2 p99=138.8 max=196.4  PASS
+sensor_stale.csv       frames=201 mismatches=0 io_errors=0 negative_fail=0  rtt_us p50=81.9 p99=131.2 max=218.7  PASS
+sudden_obstacle.csv    frames=151 mismatches=0 io_errors=0 negative_fail=0  rtt_us p50=82.1 p99=165.9 max=227.5  PASS
