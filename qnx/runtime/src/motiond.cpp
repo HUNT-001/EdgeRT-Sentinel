@@ -159,7 +159,7 @@ int main(int argc, char** argv) {
         in.risk_valid = rok;
         in.risk_level = rok ? rp.risk_level : static_cast<uint16_t>(RISK_LEVEL_INVALID);
         in.max_safe_speed_mm_s = rok ? rp.max_safe_speed_mm_s : 0;
-        in.input_age_ms = static_cast<uint32_t>(frame.sensor_age_ms + ms_of(wake - rx_ns));
+        in.input_age_ms = static_cast<uint32_t>(frame.sensor_age_ms + (wake > rx_ns ? ms_of(wake - rx_ns) : 0));
         in.sensor_stale = rn == static_cast<int>(sizeof rp) && rp.status == RISK_STALE_SENSOR;
         in.external_stop = override_stop;
         in.external_reason = override_reason;

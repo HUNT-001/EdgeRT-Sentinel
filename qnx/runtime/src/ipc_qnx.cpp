@@ -97,7 +97,8 @@ void client_close(Client* c) {
 }
 
 Ticker* ticker_open(uint32_t period_ms) {
-    Ticker* t = new Ticker{-1, -1, nullptr, 0, static_cast<uint64_t>(period_ms) * 1000000ULL, 0};
+    Ticker* t = new Ticker();  // zero-initialised (timer_t is an integer type on QNX)
+    t->period_ns = static_cast<uint64_t>(period_ms) * 1000000ULL;
     t->chid = ChannelCreate(0);
     if (t->chid == -1) { delete t; return nullptr; }
     t->coid = ConnectAttach(0, 0, t->chid, _NTO_SIDE_CHANNEL, 0);

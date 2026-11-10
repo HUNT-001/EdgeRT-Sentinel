@@ -1,0 +1,20 @@
+# Full pipeline on QNX 8.0.0 (QEMU x86_64), 2026-11-11. RT=1 priorities: safetyd 60, actuatord 55, riskd 50, motiond 50 (recv 45), sensor 30.
+# QEMU timings, not hardware numbers.
+
+## approach_stop (normal run)
+MOTION t_ms=219317 cycle=59  state=1 reason=0 speed=10     (power-up DEGRADED)
+MOTION t_ms=219797 cycle=83  state=0 reason=0 speed=250    (NORMAL after 25 healthy cycles)
+MOTION t_ms=226197 cycle=403 state=2 reason=5 speed=0      (SAFE_STOP: sustained CRITICAL risk)
+MOTION summary cycles=529 misses=0 late=0 max_late_us=2794 max_exec_us=4320 riskd_err=0 act_err=0 frames_rx=401
+actuatord: commands=529 safety_stops=0 timeouts=1 max_cmd_gap_ms=21   (timeout = motiond shut down at end of run)
+
+## invalid_frame --crash-after 40 (kill -9 motiond)
+MOTION FAULT crash t_ms=237790 cycle=40
+SAFETYD trip t_ms=237837 gap_ms=65 reason=6                (47 ms after the fault)
+actuatord: commands=40 safety_stops=1 timeouts=0
+
+## invalid_frame --wedge-after 40 (motiond alive, control loop frozen)
+MOTION FAULT wedge t_ms=83654 cycle=40
+SAFETYD trip t_ms=83675 gap_ms=0 reason=6                  (21 ms after the fault; frozen counter detected)
+ACT t_ms=83678 applied=0 src=safetyd reason=6              (zero speed applied 24 ms after the fault)
+MOTION summary cycles=40 misses=0 late=0 max_late_us=3132 max_exec_us=7744 riskd_err=0 act_err=0 frames_rx=201
