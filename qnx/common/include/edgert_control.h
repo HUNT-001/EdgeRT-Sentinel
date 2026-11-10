@@ -29,6 +29,7 @@ struct CycleInput {
     bool external_stop;       // safetyd demanded SAFE_STOP
     SafetyReason external_reason;
     bool reset_request;       // explicit operator action
+    bool sensor_stale;        // risk core reported RISK_STALE_SENSOR (diagnostics only: picks the stop reason)
 };
 
 struct CycleOutput {
@@ -61,7 +62,7 @@ public:
             healthy_ = 0;
             critical_ = 0;
             ++unhealthy_;
-            reason_ = !in.risk_valid ? SafetyReason::RISK_INVALID : SafetyReason::SENSOR_STALE;
+            reason_ = (!fresh || in.sensor_stale) ? SafetyReason::SENSOR_STALE : SafetyReason::RISK_INVALID;
             if (unhealthy_ >= c_.unhealthy_cycles_to_stop) enter_stop(reason_);
             else state_ = SafetyState::DEGRADED;
         } else {

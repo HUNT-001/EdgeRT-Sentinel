@@ -19,3 +19,25 @@ round-trip latency is measured on the real target.
 
 Pass = `IPC TEST: PASS` for every scenario. Record the `rtt_us p50/p99/max` lines in
 `docs/results/runtime/` as evidence; they are the first real IPC latency numbers for the control path.
+
+## Full pipeline (Nov 12-16 milestone, part 2)
+
+Six processes: `sensor_replayd` -> `motiond` (50 Hz) -> `riskd`, `actuatord`; `safetyd` watches motiond's heartbeat.
+`stack_run.sh` launches them all, replays a scenario, stops them and prints every log.
+
+Host (logic): `cd host && python3 -m pytest -q tests/test_stack.py`
+
+QNX console (after `bake_runtime.sh` and boot):
+
+    cd /data/home/root
+    export LOGDIR=/data/home/root/stack
+    RT=1 sh ./stack_run.sh . approach_stop.csv                      # normal run, real priorities
+    RT=1 sh ./stack_run.sh . invalid_frame.csv --crash-after 40     # kill -9 motiond mid-run
+    RT=1 sh ./stack_run.sh . invalid_frame.csv --wedge-after 40     # motiond alive but frozen
+
+What to look for:
+- `MOTION summary ... misses=0 ... max_late_us=<small>`: control-loop release jitter and deadline misses on QNX.
+- Crash/wedge runs: a `MOTION FAULT` line, then `SAFETYD trip ... reason=6`, then `ACT ... applied=0 src=safetyd`
+  within ~100 ms of the fault. Last `applied` must be 0 and nothing non-zero after it.
+- After a scenario ends the sensor goes silent, so a final SAFE_STOP (reason=1) is expected and correct.
+Save the three outputs under `docs/results/runtime/`.

@@ -7,7 +7,8 @@ IMG="${IMG:-$HOME/edgert-qnxvm}"
 BIN="$ROOT/qnx/build/qnx-x86_64"
 QNX_SDP="${QNX_SDP:-$HOME/qnx800}"
 
-for b in rt_probe link_probe riskd ipc_test; do [[ -f "$BIN/$b" ]] || { echo "error: $BIN/$b missing; run scripts/build_qnx.sh"; exit 2; }; done
+BINS="rt_probe link_probe riskd ipc_test actuatord safetyd motiond sensor_replayd"
+for b in $BINS; do [[ -f "$BIN/$b" ]] || { echo "error: $BIN/$b missing; run scripts/build_qnx.sh"; exit 2; }; done
 [[ -d "$IMG" ]] || { echo "error: image dir $IMG not found (set IMG)"; exit 2; }
 [[ -n "${QNX_TARGET:-}" ]] || source "$QNX_SDP/qnxsdp-env.sh" >/dev/null
 
@@ -18,7 +19,8 @@ done
 
 SNIP="$IMG/local/snippets/data_files.custom"; mkdir -p "$(dirname "$SNIP")"
 {
-  for b in rt_probe link_probe riskd ipc_test; do echo "[uid=0 gid=0 perms=755] home/root/$b=$BIN/$b"; done
+  for b in $BINS; do echo "[uid=0 gid=0 perms=755] home/root/$b=$BIN/$b"; done
+  echo "[uid=0 gid=0 perms=755] home/root/stack_run.sh=$ROOT/scripts/stack_run.sh"
   for c in "$STAGE"/*.csv; do echo "[uid=0 gid=0 perms=644] home/root/$(basename "$c")=$c"; done
 } > "$SNIP"
 echo "snippet:"; cat "$SNIP"

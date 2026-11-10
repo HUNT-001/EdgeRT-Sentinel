@@ -21,7 +21,7 @@ static int failures = 0, checks = 0;
     } while (0)
 
 static CycleInput good(uint32_t vmax = 1500, uint16_t level = RISK_LEVEL_LOW) {
-    return CycleInput{true, level, vmax, 10, false, SafetyReason::NONE, false};
+    return CycleInput{true, level, vmax, 10, false, SafetyReason::NONE, false, false};
 }
 static CycleInput stale() { CycleInput i = good(); i.input_age_ms = 500; return i; }
 static CycleInput invalid() { CycleInput i = good(); i.risk_valid = false; return i; }
@@ -70,6 +70,16 @@ static void test_unhealthy_to_stop_exact() {
     // Latched: healthy inputs alone never release it.
     run(c, good(), 500, &o);
     CHECK(o.state == SafetyState::SAFE_STOP && o.speed_mm_s == 0);
+}
+
+static void test_stale_status_picks_reason() {
+    Controller c;
+    CycleInput i = invalid();
+    i.sensor_stale = true;
+    CycleOutput o = c.step(i);
+    CHECK(o.reason == SafetyReason::SENSOR_STALE);
+    o = c.step(invalid());
+    CHECK(o.reason == SafetyReason::RISK_INVALID);
 }
 
 static void test_blip_recovers_without_stop() {
@@ -218,6 +228,7 @@ static Result replay(const std::vector<Fr>& fr, long duration_ms) {
         in.risk_valid = have && cur.status == RISK_VALID;
         in.risk_level = have ? static_cast<uint16_t>(cur.level) : static_cast<uint16_t>(RISK_LEVEL_INVALID);
         in.max_safe_speed_mm_s = have ? static_cast<uint32_t>(cur.vmax) : 0;
+        in.sensor_stale = have && cur.status == RISK_STALE_SENSOR;
         in.input_age_ms = have ? static_cast<uint32_t>(cur.age + (t - cur.t_ms)) : 65535;
         CycleOutput o = c.step(in);
         // Invariants that must hold on every single cycle, whatever the scenario:
@@ -245,6 +256,7 @@ int main(int argc, char** argv) {
     test_startup_and_ramp();
     test_recovery_hysteresis_exact();
     test_unhealthy_to_stop_exact();
+    test_stale_status_picks_reason();
     test_blip_recovers_without_stop();
     test_age_boundary();
     test_degraded_obeys_max_safe();
@@ -265,6 +277,7 @@ int main(int argc, char** argv) {
         });
         scenario(d, "sensor_stale", 4000, [](const Result& r) {
             CHECK(r.final_state == SafetyState::SAFE_STOP && r.final_speed == 0);
+            CHECK(r.reason == SafetyReason::SENSOR_STALE);                    // reason must say why, not just "invalid"
             CHECK(r.stop_t_ms >= 1500 && r.stop_t_ms <= 1500 + 12 * 20);      // 200 ms after data goes stale
         });
         scenario(d, "dropout_recovery", 4000, [](const Result& r) {

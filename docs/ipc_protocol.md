@@ -18,6 +18,14 @@ standard-layout, trivially copyable); a change that alters any of them fails the
 
 Messages are native-endian structs between QNX processes only. The host link uses JSON Lines, never these structs.
 
+Additional messages (protocol v1, additive): `SensorMsg` (sensor_replayd -> motiond, 40 B, reply `Ack` 8 B),
+`ActuatorAck` (reply to `ControlCommand`, 20 B; `safety_override=1` means the commanded speed was not applied),
+`MsgType::ACTUATOR_ACK = 0x0207`, `GENERIC_ACK = 0x0208`.
+
+Every server answers every message it receives (unknown or malformed ones get a fail-safe or generic reply) so no
+sender is ever left blocked. Control-path calls (motiond -> riskd, motiond -> actuatord, safetyd -> actuatord) use
+a 10 ms timeout; heartbeats are pulses and never block.
+
 ## Rules
 
 1. Every message starts with `MsgHeader{type, version}`. Drop and count anything with a wrong type or version.

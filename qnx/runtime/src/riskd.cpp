@@ -13,14 +13,17 @@ using namespace edgert;
 int main(int argc, char** argv) {
     const char* name = "edgert_riskd";
     int prio = 0;
+    bool persist = false;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--name") && i + 1 < argc) name = argv[++i];
         else if (!strcmp(argv[i], "--prio") && i + 1 < argc) prio = atoi(argv[++i]);
-        else { fprintf(stderr, "usage: riskd [--name N] [--prio P]\n"); return 2; }
+        else if (!strcmp(argv[i], "--persist")) persist = true;  // host: do not exit when clients leave
+        else { fprintf(stderr, "usage: riskd [--name N] [--prio P] [--persist]\n"); return 2; }
     }
     if (set_fifo_priority(prio) != 0) { perror("riskd: set priority"); return 1; }
     Server* s = server_open(name);
     if (!s) { perror("riskd: server_open"); return 1; }
+    if (persist) server_set_exit_when_idle(s, false);
     const RiskConfig cfg = default_risk_config();
     fprintf(stderr, "riskd: serving '%s' prio=%d protocol=v%u\n", name, prio, PROTOCOL_VERSION);
 
@@ -29,7 +32,8 @@ int main(int argc, char** argv) {
         RiskRequest req;
         size_t n = 0;
         int h = server_receive(s, &req, sizeof req, &n);
-        if (h == -2) break;
+        if (h == RX_STOP) break;
+        if (h == RX_TIMEOUT || h == RX_PULSE) continue;
         if (h < 0) { perror("riskd: receive"); server_close(s); return 1; }
 
         RiskOutput out;

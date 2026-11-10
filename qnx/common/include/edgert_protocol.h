@@ -26,6 +26,8 @@ enum class MsgType : uint16_t {
     CONTROL_COMMAND = 0x0204,
     SAFETY_COMMAND = 0x0205,
     TELEMETRY_EVENT = 0x0206,
+    ACTUATOR_ACK = 0x0207,
+    GENERIC_ACK = 0x0208,
 };
 
 // Pulse codes (QNX allows 0..127). The pulse value is a uint32 counter or sequence.
@@ -87,6 +89,32 @@ struct SensorFrame {
     uint8_t confidence_u8;  // 0..255 = 0..100 %
     uint8_t flags;          // SENSOR_FLAG_*
     uint32_t reserved;
+};
+
+// sensor_replayd -> motiond. Same layout as RiskRequest on purpose; the type field tells them apart.
+struct SensorMsg {
+    MsgHeader header;
+    uint32_t sequence;
+    SensorFrame frame;
+};
+
+// Plain acknowledgement (reply to SensorMsg and SafetyCommand).
+struct Ack {
+    MsgHeader header;
+    uint32_t sequence;
+};
+
+// actuatord -> motiond, reply to ControlCommand. safety_override=1 means safetyd (or the actuator
+// command-timeout) has forced a stop and the commanded speed was NOT applied.
+struct ActuatorAck {
+    MsgHeader header;
+    uint32_t sequence;
+    int32_t applied_left_mm_s;
+    int32_t applied_right_mm_s;
+    uint8_t state;  // SafetyState actuatord is enforcing
+    uint8_t reason;
+    uint8_t safety_override;
+    uint8_t reserved;
 };
 
 // motiond risk worker -> riskd.
@@ -168,6 +196,22 @@ EDGERT_OFFSET(SensorFrame, sensor_age_ms, 24);
 EDGERT_OFFSET(SensorFrame, confidence_u8, 26);
 EDGERT_OFFSET(SensorFrame, flags, 27);
 EDGERT_OFFSET(SensorFrame, reserved, 28);
+
+EDGERT_WIRE_TYPE(SensorMsg, 40);
+EDGERT_OFFSET(SensorMsg, sequence, 4);
+EDGERT_OFFSET(SensorMsg, frame, 8);
+
+EDGERT_WIRE_TYPE(Ack, 8);
+EDGERT_OFFSET(Ack, sequence, 4);
+
+EDGERT_WIRE_TYPE(ActuatorAck, 20);
+EDGERT_OFFSET(ActuatorAck, sequence, 4);
+EDGERT_OFFSET(ActuatorAck, applied_left_mm_s, 8);
+EDGERT_OFFSET(ActuatorAck, applied_right_mm_s, 12);
+EDGERT_OFFSET(ActuatorAck, state, 16);
+EDGERT_OFFSET(ActuatorAck, reason, 17);
+EDGERT_OFFSET(ActuatorAck, safety_override, 18);
+EDGERT_OFFSET(ActuatorAck, reserved, 19);
 
 EDGERT_WIRE_TYPE(RiskRequest, 40);
 EDGERT_OFFSET(RiskRequest, sequence, 4);
