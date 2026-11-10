@@ -1,0 +1,8 @@
+name: invalid_frame
+description: Sensor flags 100 ms of frames invalid mid-run. Core must reject them with the invalid-input fail-safe.
+rate_hz: 100
+duration_ms: 2000
+keyframes:
+  - {t: 0, distance_mm: 6000, ego_speed_mm_s: 500}
+faults:
+  - {type: invalid, from: 800, to: 900}

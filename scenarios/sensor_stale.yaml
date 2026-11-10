@@ -1,0 +1,9 @@
+name: sensor_stale
+description: Healthy approach, then sensor data goes stale (500 ms old) for 1 s. Core must fail safe, not extrapolate.
+rate_hz: 50
+duration_ms: 4000
+keyframes:
+  - {t: 0,    distance_mm: 8000, ego_speed_mm_s: 800}
+  - {t: 4000, distance_mm: 5000, ego_speed_mm_s: 800}
+faults:
+  - {type: stale, from: 1500, to: 2500, age_ms: 500}

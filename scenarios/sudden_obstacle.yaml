@@ -1,0 +1,9 @@
+name: sudden_obstacle
+description: Clear path, then an obstacle appears at 1.2 m while moving at 1 m/s. Must reach critical immediately.
+rate_hz: 50
+duration_ms: 3000
+closing: {constant: 1000}
+keyframes:
+  - {t: 0,    distance_mm: 20000, ego_speed_mm_s: 1000}
+  - {t: 1000, distance_mm: 20000, ego_speed_mm_s: 1000}
+  - {t: 1020, distance_mm: 1200,  ego_speed_mm_s: 1000}

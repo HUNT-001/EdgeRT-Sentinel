@@ -40,3 +40,10 @@ This is a simulated research prototype. It is not certified, and it is not suita
 ## Licence
 
 MIT. See [LICENSE](LICENSE). The QNX SDP, target images and AMD tools are not part of this repository.
+
+## Off-target tests
+
+`bash scripts/run_tests.sh` builds and runs: IPC protocol contract, RACE C++ core vs Python golden model
+(directed + 10,000 seeded random vectors), golden-model property tests, and scenario/CLI tests.
+Scenarios live in `scenarios/*.yaml`; try `edgert scenario summary scenarios/approach_stop.yaml`.
+Specs: `docs/risk_spec.md`, `docs/ipc_protocol.md`.

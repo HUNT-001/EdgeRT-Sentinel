@@ -19,3 +19,6 @@ qnx800/
 .probe
 .vscode/
 .idea/
+
+accelerator/vectors/random_seeded.csv
+build_risk/

@@ -23,3 +23,7 @@ jobs:
           pip install -e "host[dev]"
           cd host && pytest -q
           cd .. && edgert probe --log link.log --expect 20 --hz 100
+      - name: Protocol, RACE equivalence, golden model, scenarios
+        run: |
+          pip install pytest
+          bash scripts/run_tests.sh

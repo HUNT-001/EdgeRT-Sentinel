@@ -1,0 +1,10 @@
+name: dropout_recovery
+description: Sensor frames vanish for 600 ms then resume, then confidence collapses for 400 ms.
+rate_hz: 50
+duration_ms: 4000
+keyframes:
+  - {t: 0,    distance_mm: 7000, ego_speed_mm_s: 600}
+  - {t: 4000, distance_mm: 4600, ego_speed_mm_s: 600}
+faults:
+  - {type: dropout, from: 1000, to: 1600}
+  - {type: low_confidence, from: 2500, to: 2900}

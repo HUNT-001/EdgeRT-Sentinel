@@ -1,0 +1,9 @@
+name: approach_stop
+description: Robot closes on a static obstacle at 1 m/s, decelerating to a stop. Risk should climb and speed limit fall.
+rate_hz: 50
+duration_ms: 8000
+keyframes:
+  - {t: 0,    distance_mm: 9000, ego_speed_mm_s: 1000}
+  - {t: 5000, distance_mm: 4000, ego_speed_mm_s: 1000}
+  - {t: 7000, distance_mm: 1400, ego_speed_mm_s: 400}
+  - {t: 8000, distance_mm: 1100, ego_speed_mm_s: 0}

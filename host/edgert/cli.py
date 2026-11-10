@@ -9,6 +9,7 @@ from pathlib import Path
 import typer
 
 from . import doctor as doc
+from . import scenario as sc
 from .probe import parse_lines, probe_tcp
 
 app = typer.Typer(add_completion=False, help="EdgeRT Workbench CLI")
@@ -49,6 +50,43 @@ def probe(
     typer.echo(json.dumps(s))
     typer.echo(f"GATE1 LINK PROBE: {'PASS' if s['pass'] else 'FAIL'}")
     raise typer.Exit(0 if s["pass"] else 1)
+
+
+scenario_app = typer.Typer(help="Scenario files: validate, expand, summarize")
+app.add_typer(scenario_app, name="scenario")
+
+
+def _load(path: Path) -> dict:
+    try:
+        return sc.load(path)
+    except (sc.ScenarioError, OSError) as e:
+        typer.echo(f"error: {path}: {e}", err=True)
+        raise typer.Exit(2)
+
+
+@scenario_app.command("validate")
+def scenario_validate(paths: list[Path]) -> None:
+    """Validate scenario files. Exit 2 on the first invalid one."""
+    for p in paths:
+        _load(p)
+        typer.echo(f"ok  {p}")
+
+
+@scenario_app.command("summary")
+def scenario_summary(path: Path) -> None:
+    """Print expected-risk summary for a scenario (from the golden model)."""
+    typer.echo(json.dumps(sc.summarize(sc.expand(_load(path))), indent=2))
+
+
+@scenario_app.command("expand")
+def scenario_expand(path: Path, out: Path = typer.Option(None, help="Write JSON Lines here (default stdout)")) -> None:
+    """Expand a scenario to JSON Lines: one frame with inputs and expected output per line."""
+    lines = [json.dumps(f, separators=(",", ":")) for f in sc.expand(_load(path))]
+    if out:
+        out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        typer.echo(f"wrote {len(lines)} frames to {out}")
+    else:
+        typer.echo("\n".join(lines))
 
 
 if __name__ == "__main__":
