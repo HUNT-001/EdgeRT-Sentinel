@@ -3,11 +3,12 @@
 #   Host check : make HOST=1        (Linux g++, logic test only)
 
 QCXX     ?= q++
+HOST_CXX ?= g++
 QVARIANT ?= gcc_ntox86_64
 CXXFLAGS ?= -std=gnu++17 -O2 -Wall -Wextra
 
 ifeq ($(HOST),1)
-  BUILD_CXX := $(CXX)
+  BUILD_CXX := $(HOST_CXX)
   LDLIBS    := -lpthread
   OUT       := ../build/host
 else

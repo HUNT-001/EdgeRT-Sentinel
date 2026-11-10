@@ -3,13 +3,14 @@
 #   Host check : make HOST=1        (Linux g++, Unix-socket transport, logic test only)
 
 QCXX     ?= q++
+HOST_CXX ?= g++
 QVARIANT ?= gcc_ntox86_64
 CXXFLAGS ?= -std=gnu++17 -O2 -Wall -Wextra
 INC      := -I../common/include -I../../accelerator/include
 
 ifeq ($(HOST),1)
   CXXFLAGS += -Werror
-  BUILD_CXX := $(CXX)
+  BUILD_CXX := $(HOST_CXX)
   OUT       := ../build/host
 else
   BUILD_CXX := $(QCXX) -V$(QVARIANT)
