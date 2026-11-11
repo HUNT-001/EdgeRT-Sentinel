@@ -17,3 +17,9 @@ Raw v1 numbers are from the first synthesis run; v2 reports are in `risk_v2/`.
 - Latency 121-376 cycles for 1-256 samples.
 - 22,219 LUT (35%), 39,477 FF (31%), 20 DSP, 8 BRAM_18K on xc7a100t.
 - Estimated clock 6.60 ns against the 5 ns target, so timing is not met. Next step: re-run at 8 ns.
+
+## v3 at 8 ns target (final)
+- Loop II = 1, cosim PASS (496 vectors, 0 errors).
+- Estimated clock 6.603 ns vs 8.00 ns target: met on HLS estimate (no place-and-route run).
+- Latency 114-369 cycles for 1-256 samples.
+- 21,213 LUT (33%), 35,743 FF (28%), 20 DSP, 8 BRAM_18K on xc7a100t.
