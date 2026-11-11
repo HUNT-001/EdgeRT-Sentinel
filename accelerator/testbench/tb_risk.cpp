@@ -121,25 +121,26 @@ int main(int argc, char** argv) {
         for (int i = 0; i < kEmbeddedRows; ++i) rows.push_back(to_row(kEmbeddedVectors[i]));
     }
 
-    static RiskInput in[RISK_MAX_SAMPLES];
-    static RiskOutput out[RISK_MAX_SAMPLES];
+    static InWord win[RISK_MAX_SAMPLES];
+    static OutWord wout[RISK_MAX_SAMPLES];
     long long errors = 0, batches = 0;
     size_t i = 0;
     while (i < rows.size()) {
         int n = 0;
         while (i + n < rows.size() && n < RISK_MAX_SAMPLES && cfg_equal(rows[i + n].cfg, rows[i].cfg)) {
-            in[n] = rows[i + n].in;
+            win[n] = pack_input(rows[i + n].in);
             ++n;
         }
-        risk_kernel(in, out, rows[i].cfg, n);
+        risk_kernel(win, wout, rows[i].cfg, n);
         ++batches;
         for (int k = 0; k < n; ++k) {
-            if (!out_equal(out[k], rows[i + k].want)) {
+            const RiskOutput got = unpack_output(wout[k]);
+            if (!out_equal(got, rows[i + k].want)) {
                 if (errors < 10)
                     std::printf("MISMATCH row %zu: got risk=%u level=%u ttc=%u stop=%u speed=%u status=%u, want risk=%u "
                                 "level=%u ttc=%u stop=%u speed=%u status=%u\n",
-                                i + k, out[k].risk_q15, out[k].risk_level, out[k].time_to_collision_ms,
-                                out[k].stopping_distance_mm, out[k].max_safe_speed_mm_s, out[k].status,
+                                i + k, got.risk_q15, got.risk_level, got.time_to_collision_ms,
+                                got.stopping_distance_mm, got.max_safe_speed_mm_s, got.status,
                                 rows[i + k].want.risk_q15, rows[i + k].want.risk_level,
                                 rows[i + k].want.time_to_collision_ms, rows[i + k].want.stopping_distance_mm,
                                 rows[i + k].want.max_safe_speed_mm_s, rows[i + k].want.status);
