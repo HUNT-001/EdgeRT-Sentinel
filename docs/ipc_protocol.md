@@ -42,3 +42,22 @@ SensorFrame 32, RiskRequest 40, RiskResponse 40, ControlCommand 32, SafetyComman
 ## Safety states and reasons
 
 `NORMAL -> DEGRADED -> SAFE_STOP`. Reasons: sensor stale, risk stale/invalid, deadline miss, critical risk, heartbeat lost, actuator timeout, invalid command. Return from SAFE_STOP is an explicit operator action, never automatic.
+
+## Operator reset and telemetry (added after the first runtime)
+
+**OPERATOR_COMMAND (0x0209) / OPERATOR_ACK (0x020A)**, 12 bytes each. `opctl reset` -> motiond -> safetyd.
+- motiond answers `NOT_LATCHED` if the controller is not in SAFE_STOP; otherwise it forwards RESET to safetyd.
+- safetyd accepts only while heartbeats are fresh (`REJECTED` otherwise), clears its own trip, then sends a
+  `SAFETY_COMMAND` with `state=DEGRADED` (meaning "release the latch") to actuatord. motiond alone can never
+  unlatch the actuator.
+- After `OK`, motiond asks the controller to leave SAFE_STOP for up to 25 cycles (500 ms). The controller still
+  requires healthy, fresh, non-critical input, so a reset while the fault persists ends in `MOTION RESET rejected`
+  and the system stays stopped. Success logs `MOTION RESET done` and the state goes DEGRADED, then NORMAL after
+  25 healthy cycles.
+- No authentication: any local process may send these. This is a stated demo assumption.
+
+**Telemetry.** Services emit `TELEMETRY_EVENT` (32 bytes, `value2` added in the old reserved slot) through a
+non-blocking ring (`tele_tx.h`): emit() never blocks, a low-priority thread forwards to `telemetryd` with a 5 ms
+timed call, a full ring or dead telemetryd drops events. `telemetryd` prints JSON Lines and reports per-source
+sequence gaps as `{"ev":"gap","lost":N}`. `control_cycle` (10 Hz): `v0`=speed mm/s, `v1`=distance mm,
+`v2`=risk_q15 | level<<16 | state<<20 | reason<<24.

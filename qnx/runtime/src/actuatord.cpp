@@ -3,13 +3,15 @@
 //   2. no ControlCommand for 100 ms forces zero speed until commands resume (a dead or wedged motiond
 //      must never leave the last speed applied).
 // Log lines (absolute CLOCK_MONOTONIC ms, comparable across processes):
-//   ACT t_ms=<ms> applied=<mm/s> src=<init|motiond|safetyd|timeout> reason=<n>
+//   ACT t_ms=<ms> applied=<mm/s> src=<init|motiond|safetyd|timeout|reset> reason=<n>
+// A SafetyCommand with state=DEGRADED releases the latch (sent only by safetyd after an operator reset).
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "edgert_protocol.h"
 #include "svc_common.h"
+#include "tele_tx.h"
 
 using namespace edgert;
 
@@ -22,6 +24,8 @@ int main(int argc, char** argv) {
         else { fprintf(stderr, "usage: actuatord [--prio P] [--cmd-timeout-ms N]\n"); return 2; }
     }
     install_stop_handlers();
+    TeleTx tele(ServiceId::ACTUATOR, prio > 0 ? 20 : 0);
+    tele.emit(EventCode::SERVICE_START);
     if (set_fifo_priority(prio) != 0) { perror("actuatord: set priority"); return 1; }
     Server* s = server_open(NAME_ACTUATORD);
     if (!s) { perror("actuatord: server_open"); return 1; }
@@ -39,6 +43,8 @@ int main(int argc, char** argv) {
         if (v != applied || strcmp(why, src) != 0) {
             applied = v;
             src = why;
+            tele.emit(EventCode::ACTUATOR_APPLIED, static_cast<uint32_t>(v),
+                      !strcmp(why, "motiond") ? 1 : !strcmp(why, "safetyd") ? 2 : !strcmp(why, "timeout") ? 3 : !strcmp(why, "reset") ? 4 : 0);
             printf("ACT t_ms=%llu applied=%d src=%s reason=%u\n", (unsigned long long)ms_of(now_ns()), v, why, reason);
             fflush(stdout);
         }
@@ -80,6 +86,12 @@ int main(int argc, char** argv) {
                     latch_reason = static_cast<SafetyReason>(m.sc.reason);
                     ++safety_stops;
                     apply(0, "safetyd", m.sc.reason);
+                }
+                else if (m.sc.state == static_cast<uint8_t>(SafetyState::DEGRADED) && latched) {
+                    latched = false;
+                    latch_reason = SafetyReason::NONE;
+                    timed_out = false;
+                    apply(0, "reset", 0);  // stays at zero; motiond ramps up again under its own policy
                 }
                 Ack a;
                 memset(&a, 0, sizeof a);

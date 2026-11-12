@@ -7,7 +7,7 @@ IMG="${IMG:-$HOME/edgert-qnxvm}"
 BIN="$ROOT/qnx/build/qnx-x86_64"
 QNX_SDP="${QNX_SDP:-$HOME/qnx800}"
 
-BINS="rt_probe link_probe riskd ipc_test actuatord safetyd motiond sensor_replayd"
+BINS="rt_probe link_probe riskd ipc_test actuatord safetyd motiond sensor_replayd telemetryd opctl latch_test"
 for b in $BINS; do [[ -f "$BIN/$b" ]] || { echo "error: $BIN/$b missing; run scripts/build_qnx.sh"; exit 2; }; done
 [[ -d "$IMG" ]] || { echo "error: image dir $IMG not found (set IMG)"; exit 2; }
 [[ -n "${QNX_TARGET:-}" ]] || source "$QNX_SDP/qnxsdp-env.sh" >/dev/null

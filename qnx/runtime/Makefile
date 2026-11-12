@@ -20,7 +20,7 @@ else
 endif
 
 COMMON := src/ipc_qnx.cpp src/ipc_host.cpp ../../accelerator/src/risk_core.cpp
-BINS   := $(OUT)/riskd $(OUT)/ipc_test $(OUT)/actuatord $(OUT)/safetyd $(OUT)/motiond $(OUT)/sensor_replayd
+BINS   := $(OUT)/riskd $(OUT)/ipc_test $(OUT)/actuatord $(OUT)/safetyd $(OUT)/motiond $(OUT)/sensor_replayd $(OUT)/telemetryd $(OUT)/opctl $(OUT)/latch_test
 
 .PHONY: all clean
 all: $(BINS)

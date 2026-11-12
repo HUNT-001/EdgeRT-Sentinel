@@ -28,6 +28,8 @@ enum class MsgType : uint16_t {
     TELEMETRY_EVENT = 0x0206,
     ACTUATOR_ACK = 0x0207,
     GENERIC_ACK = 0x0208,
+    OPERATOR_COMMAND = 0x0209,
+    OPERATOR_ACK = 0x020A,
 };
 
 // Pulse codes (QNX allows 0..127). The pulse value is a uint32 counter or sequence.
@@ -66,7 +68,19 @@ enum class EventCode : uint16_t {
     WATCHDOG_TRIP = 12,
     FAULT_INJECTED = 13,
     FAULT_CLEARED = 14,
+    OPERATOR_RESET = 15,    // value0 = OperatorResult
+    ACTUATOR_APPLIED = 16,  // value0 = applied mm/s, value1 = ActuatorSource
 };
+
+// Operator commands (opctl -> motiond; motiond -> safetyd). RESET releases a latched SAFE_STOP.
+enum class OperatorCmd : uint8_t { RESET = 1 };
+enum class OperatorResult : uint8_t {
+    OK = 0,             // accepted (for opctl: queued, the outcome is visible as a state change / telemetry)
+    NOT_LATCHED = 1,    // nothing to reset
+    REJECTED = 2,       // a safety condition still holds
+    UNSUPPORTED = 3,   // unknown command
+};
+enum class ActuatorSource : int32_t { INIT = 0, MOTIOND = 1, SAFETYD = 2, TIMEOUT = 3, RESET = 4 };
 
 constexpr uint8_t SENSOR_FLAG_INVALID = 0x01;
 constexpr uint8_t SENSOR_FLAG_REPLAY_END = 0x02;
@@ -162,6 +176,24 @@ struct SafetyCommand {
     uint32_t reserved1;
 };
 
+// opctl -> motiond, motiond -> safetyd. Reply is an OperatorAck.
+struct OperatorCommand {
+    MsgHeader header;
+    uint32_t sequence;
+    uint8_t command;  // OperatorCmd
+    uint8_t arg0;
+    uint16_t reserved;
+};
+
+struct OperatorAck {
+    MsgHeader header;
+    uint32_t sequence;
+    uint8_t result;  // OperatorResult
+    uint8_t state;   // SafetyState after handling
+    uint8_t reason;  // SafetyReason
+    uint8_t reserved;
+};
+
 // any service -> telemetryd.
 struct TelemetryEvent {
     MsgHeader header;
@@ -171,7 +203,7 @@ struct TelemetryEvent {
     uint32_t sequence;
     uint32_t value0;
     int32_t value1;
-    uint32_t reserved;
+    uint32_t value2;
 };
 
 // ---- layout contract -------------------------------------------------------
@@ -253,6 +285,17 @@ EDGERT_OFFSET(TelemetryEvent, monotonic_timestamp_ns, 8);
 EDGERT_OFFSET(TelemetryEvent, sequence, 16);
 EDGERT_OFFSET(TelemetryEvent, value0, 20);
 EDGERT_OFFSET(TelemetryEvent, value1, 24);
-EDGERT_OFFSET(TelemetryEvent, reserved, 28);
+EDGERT_OFFSET(TelemetryEvent, value2, 28);
+
+EDGERT_WIRE_TYPE(OperatorCommand, 12);
+EDGERT_OFFSET(OperatorCommand, sequence, 4);
+EDGERT_OFFSET(OperatorCommand, command, 8);
+EDGERT_OFFSET(OperatorCommand, arg0, 9);
+
+EDGERT_WIRE_TYPE(OperatorAck, 12);
+EDGERT_OFFSET(OperatorAck, sequence, 4);
+EDGERT_OFFSET(OperatorAck, result, 8);
+EDGERT_OFFSET(OperatorAck, state, 9);
+EDGERT_OFFSET(OperatorAck, reason, 10);
 
 }  // namespace edgert

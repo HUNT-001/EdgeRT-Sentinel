@@ -82,3 +82,89 @@ def test_motiond_failure_is_caught_by_independent_watchdog(tmp_path, fault, n):
     assert zero is not None
     assert zero - fault_t <= 400
     assert not any(a > 0 for t_, a, _, _ in r["act"] if t_ > zero)
+
+
+# ---- operator reset + telemetry -------------------------------------------------------------------------
+
+import json
+import os
+import time
+
+
+def _launch(tmp_path, scenario, extra_motiond=()):
+    csv = tmp_path / f"{scenario}.csv"
+    csv.write_text("\n".join(sc.to_csv_lines(sc.expand(sc.load(ROOT / "scenarios" / f"{scenario}.yaml")))) + "\n")
+    env = {**os.environ, "LOGDIR": str(tmp_path / "logs"), "TAIL_MS": "800"}
+    return subprocess.Popen(["sh", str(ROOT / "scripts" / "stack_run.sh"), str(BIN), str(csv), *extra_motiond],
+                            env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+
+
+def _wait_log(path, pattern, timeout=20):
+    end = time.time() + timeout
+    while time.time() < end:
+        if path.exists() and re.search(pattern, path.read_text()):
+            return True
+        time.sleep(0.05)
+    return False
+
+
+def _opctl():
+    return subprocess.run([str(BIN / "opctl"), "reset"], capture_output=True, text=True, timeout=10)
+
+
+def _events(tmp_path):
+    return [json.loads(x) for x in (tmp_path / "logs" / "telemetry.jsonl").read_text().splitlines() if x.strip()]
+
+
+def test_operator_reset_recovers_after_fault_clears(tmp_path):
+    p = _launch(tmp_path, "sensor_stale")                      # stale 1.5-2.5 s -> SAFE_STOP, data healthy after
+    mlog = tmp_path / "logs" / "motiond.log"
+    assert _wait_log(mlog, r"state=2 reason=1")
+    time.sleep(1.4)                                           # stale window over, healthy frames flowing, still latched
+    r = _opctl()
+    assert r.returncode == 0, r.stdout + r.stderr
+    out, _ = p.communicate(timeout=60)
+    log = mlog.read_text()
+    assert "MOTION RESET done" in log, log
+    states = [(int(a), int(b)) for a, b in re.findall(r"state=(\d) reason=(\d+)", log)]
+    stop = states.index((2, 1))
+    assert (1, 0) in states[stop:] and (0, 0) in states[stop:]          # DEGRADED then NORMAL again
+    ev = _events(tmp_path)
+    assert any(e["ev"] == "operator_reset" and e["src"] == "safety" and e["v0"] == 0 for e in ev)
+    assert any(e["ev"] == "operator_reset" and e["src"] == "motion" and e["v0"] == 10 for e in ev)
+    assert not any(e["ev"] == "gap" for e in ev), "telemetry lost events"
+    acts = [(int(t), int(a)) for t, a in re.findall(r"ACT t_ms=(\d+) applied=(-?\d+) src=motiond", (tmp_path / "logs" / "actuatord.log").read_text())]
+    assert any(a > 0 for _, a in acts[len(acts) // 2:])                  # actuator moves again after the reset
+
+
+def test_operator_reset_refused_while_fault_persists(tmp_path):
+    p = _launch(tmp_path, "sensor_stale")
+    mlog = tmp_path / "logs" / "motiond.log"
+    assert _wait_log(mlog, r"state=2 reason=1")
+    r = _opctl()                                              # still inside the stale window
+    assert r.returncode == 0                                  # safetyd released the actuator, controller decides
+    assert _wait_log(mlog, r"MOTION RESET (done|rejected)")
+    log = mlog.read_text()
+    assert "MOTION RESET rejected" in log, log                # controller refused: input still unhealthy
+    assert "MOTION RESET done" not in log
+    p.communicate(timeout=60)
+
+
+def test_operator_reset_when_not_latched_is_a_noop(tmp_path):
+    p = _launch(tmp_path, "approach_stop")
+    assert _wait_log(tmp_path / "logs" / "motiond.log", r"state=0 reason=0")
+    r = _opctl()
+    assert r.returncode == 3 and "not latched" in r.stdout, r.stdout + r.stderr
+    p.communicate(timeout=60)
+
+
+def test_latch_release_path_with_fake_motiond(tmp_path):
+    procs = [subprocess.Popen([str(BIN / n), *a], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+             for n, a in (("actuatord", []), ("safetyd", ["--grace-ms", "4000"]))]
+    try:
+        r = subprocess.run([str(BIN / "latch_test")], capture_output=True, text=True, timeout=30)
+        assert "LATCH TEST: PASS" in r.stdout, r.stdout
+    finally:
+        for p in procs:
+            p.terminate()
+            p.wait(timeout=5)
